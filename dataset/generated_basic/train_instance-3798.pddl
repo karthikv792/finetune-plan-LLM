@@ -5,9 +5,9 @@
 (:objects a b c d )
 (:init
 (handempty)
-(on a d)
-(on b c)
-(ontable c)
+(on a c)
+(ontable b)
+(on c d)
 (on d b)
 (clear a)
 )

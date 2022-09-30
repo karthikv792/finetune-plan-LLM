@@ -7,10 +7,8 @@
 (handempty)
 (ontable a)
 (ontable b)
-(ontable c)
-(ontable d)
-(clear a)
-(clear b)
+(on c a)
+(on d b)
 (clear c)
 (clear d)
 )
@@ -18,7 +16,7 @@
 (and
 (on a c)
 (on b d)
-(on d a))
+(on c b))
 )
 )
 

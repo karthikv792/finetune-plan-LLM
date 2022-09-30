@@ -5,17 +5,20 @@
 (:objects a b c d e )
 (:init
 (handempty)
-(on a b)
-(on b e)
-(ontable c)
-(on d a)
-(on e c)
-(clear d)
+(on a d)
+(on b a)
+(on c b)
+(ontable d)
+(ontable e)
+(clear c)
+(clear e)
 )
 (:goal
 (and
-(on a e)
-(on e d))
+(on b e)
+(on c d)
+(on d b)
+(on e a))
 )
 )
 

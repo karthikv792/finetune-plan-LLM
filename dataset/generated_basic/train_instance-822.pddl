@@ -7,14 +7,15 @@
 (handempty)
 (ontable a)
 (ontable b)
-(on c b)
-(on d c)
-(clear a)
-(clear d)
+(on c d)
+(on d a)
+(clear b)
+(clear c)
 )
 (:goal
 (and
-(on b c))
+(on a b)
+(on c d))
 )
 )
 

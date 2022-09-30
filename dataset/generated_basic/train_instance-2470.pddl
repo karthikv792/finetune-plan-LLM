@@ -14,7 +14,8 @@
 )
 (:goal
 (and
-(on a b))
+(on a c)
+(on c d))
 )
 )
 

@@ -37,39 +37,82 @@ class Instance_Generator():
         return True
 
     def add_existing_files_to_hash_set(self):
+        em = []
+        count = 0
         for i in os.listdir(f"./dataset/{self.data['domain']}/"):
-            f = open(f"./dataset/{self.data['domain']}/{i}", "r")
+            try:
+                f = open(f"./dataset/{self.data['domain']}/train_instance-{count}.pddl", "r")
+            except:
+                em.append(count)
+                count+=1
+                continue
             pddl = f.read()
-            self.hashset.add(hashlib.md5(pddl.encode('utf-8')).hexdigest())
+            if pddl:
+                to_add = self.convert_pddl(pddl)
+                self.hashset.add(to_add)
+            else:
+                em.append(count)
+            count+=1
+
+
         length = len(self.hashset)
         for i in os.listdir(f"./instances/{self.data['domain']}/"):
             f = open(f"./instances/{self.data['domain']}/{i}", "r")
             pddl = f.read()
-            self.hashset.add(hashlib.md5(pddl.encode('utf-8')).hexdigest())
-        return length
+            to_add = self.convert_pddl(pddl)
+            if to_add in self.hashset:
+                print("OOPS")
+            self.hashset.add(to_add)
+        return length, em
+
+    def convert_pddl(self, pddl):
+        init = []
+        goal = []
+        init_check=False
+        goal_check=False
+        for i in pddl.split('\n'):
+            if 'init' in i:
+                init_check = True
+                continue
+            elif 'goal' in i:
+                goal_check=True
+                init_check=False
+                continue
+            to_append = i.replace("(","").replace(")","")
+            if to_append and 'and' not in to_append:
+                if init_check:
+                    init.append(to_append)
+                elif goal_check:
+                    goal.append(to_append)
+        pddl_to_hash = ','.join(sorted(init)+sorted(goal))
+        hash_of_instance = hashlib.md5(pddl_to_hash.encode('utf-8')).hexdigest()
+
+        return hash_of_instance
+
 
     def gen_goal_directed_instances(self):
         n = self.data['n_instances'] + 2
         n_objs = range(4, len(self.data["encoded_objects"]) + 1)
         CWD = os.getcwd()
         CMD = "./blocksworld 4 {}"
-        start = self.add_existing_files_to_hash_set()
+        start, missing = self.add_existing_files_to_hash_set()
 
         os.chdir("pddlgenerators/blocksworld/")
         instance_file = f"{CWD}/{self.instances_template}"
         domain = f"{CWD}/instances/{self.data['domain_file']}"
-        c = start
-
+        print(missing)
+        c = missing.pop() if missing else start
         for obj in n_objs:
             print(f'==================== Number of blocks {obj} ====================')
             count = 0
             cmd_exec = CMD.format(obj)
-            while count<25:
+            while count<50:
                 with open(instance_file.format(c), "w+") as fd:
                     pddl = os.popen(cmd_exec).read()
-                    hash_of_instance = hashlib.md5(pddl.encode('utf-8')).hexdigest()
+                    hash_of_instance = self.convert_pddl(pddl)
+                    # hash_of_instance = hashlib.md5(pddl.encode('utf-8')).hexdigest()
                     if hash_of_instance in self.hashset:
-                        print("[-]: Same instance, skipping...")
+                        # print("[-]: Same instance, skipping...")
                         count+=1
                         continue
                     count=0
@@ -78,10 +121,16 @@ class Instance_Generator():
 
                 inst_to_parse = instance_file.format(c)
                 if self.instance_ok(domain, inst_to_parse):
-                    c += 1
-                    print(f"[+]: Instance created. Total instances: {c}")
+                    if missing:
+                        c = missing.pop()
+                    else:
+                        if c<start:
+                            c=start
+                        else:
+                            c += 1
+                    # print(f"[+]: Instance created. Total instances: {c}")
                 else:
-                    print("[-]: Instance not valid.")
+                    # print("[-]: Instance not valid.")
                     self.hashset.remove(hash_of_instance)
                     os.remove(inst_to_parse)
                     continue
@@ -91,5 +140,6 @@ class Instance_Generator():
         os.chdir(CWD)
 
 if __name__ == '__main__':
-    ig = Instance_Generator('./configs/t1_goal_directed_reasoning.yaml')
+    config_file = './configs/t1_goal_directed_reasoning.yaml'
+    ig = Instance_Generator(config_file)
     ig.gen_goal_directed_instances()

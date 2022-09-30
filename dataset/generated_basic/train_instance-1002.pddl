@@ -6,15 +6,15 @@
 (:init
 (handempty)
 (on a d)
-(on b c)
-(ontable c)
-(on d b)
+(ontable b)
+(on c b)
+(on d c)
 (clear a)
 )
 (:goal
 (and
-(on b c)
-(on d a))
+(on a b)
+(on c a))
 )
 )
 

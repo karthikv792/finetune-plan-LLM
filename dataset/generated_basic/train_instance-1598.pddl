@@ -8,12 +8,13 @@
 (on a b)
 (on b d)
 (ontable c)
-(on d c)
+(ontable d)
 (clear a)
+(clear c)
 )
 (:goal
 (and
-(on a d)
+(on b c)
 (on c a))
 )
 )

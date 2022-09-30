@@ -16,11 +16,13 @@ class Prompt_Preparer():
         self.data = None
         self.read_config(config_file)
         self.instances_template = f"./dataset/{self.data['domain']}/train_{self.data['instances_template']}"
-        self.dataset = 'dataset.jsonl'
-        self.completed = 'completed.txt'
-        with open(self.completed, 'r') as f:
+        self.dataset = 'dataset1.jsonl'
+        self.completed = 'completed1.txt'
+        with open(self.completed, 'r') as file:
             lines = file.readlines()
             self.completed_list = [line.rstrip() for line in lines]
+            # print(self.completed_list)
+        self.verbose=True
 
 
 
@@ -31,6 +33,7 @@ class Prompt_Preparer():
 
     def compute_plan(self, domain, instance, timeout=30):
         fast_downward_path = os.getenv("FAST_DOWNWARD")
+        print(fast_downward_path)
         # Remove > /dev/null to see the output of fast-downward
         assert os.path.exists(f"{fast_downward_path}/fast-downward.py")
         cmd = f"timeout {timeout}s {fast_downward_path}/fast-downward.py {domain} {instance} --search \"astar(lmcut())\" > /dev/null 2>&1"
@@ -84,9 +87,9 @@ class Prompt_Preparer():
         if GOAL != "":
             text += f"\nMy goal is to have that {GOAL}."
         if PLAN != "":
-            text += f"\n\nMy plan is as follows:\n\n[PLAN]{PLAN}\n"
+            text += f"\n\nMy plan is as follows:\n\n [PLAN]{PLAN}\n"
         else:
-            text += f"\n\nMy plan is as follows:\n\n[PLAN]{PLAN}"
+            text += f"\n\nMy plan is as follows:\n\n [PLAN]{PLAN}"
 
         # TODO: Add this replacement to the yml file -- Use "Translations" dict in yml
         text = text.replace("-", " ").replace("ontable", "on the table")
@@ -115,7 +118,7 @@ class Prompt_Preparer():
             act_name, objs = action.split(" ")[0], action.split(" ")[1:]
             objs = [OBJS[obj] for obj in objs]
             PLAN += self.data['actions'][act_name].format(*objs) + "\n"
-        PLAN += "[PLAN END]"
+        PLAN += " [PLAN END]"
 
         return INIT, GOAL, PLAN
 
@@ -125,15 +128,15 @@ class Prompt_Preparer():
         return reader.parse_instance(instance)
 
     def get_start_end(self):
-        start = 1 # Change start to account for instances that are already covered
-        end = len(os.listdir(f'./dataset/{self.data["domain"]}/'))-1
+        start = 0 # Change start to account for instances that are already covered
+        end = len(os.listdir(f'./dataset/{self.data["domain"]}/'))
         return start, end
 
     def add_to_dataset(self, data, instance):
-        with open(self.dataset, 'w') as f:
+        with open(self.dataset, 'a') as f:
             json.dump(data,f)
             f.write('\n')
-        with open(self.completed, 'w') as f:
+        with open(self.completed, 'a') as f:
             f.write(f'{instance}\n')
 
     """
@@ -150,27 +153,36 @@ class Prompt_Preparer():
         n_examples = 1
         start, end = self.get_start_end()
 
-        for start in range(start, end + 2 - n_examples):
-            prompt = self.data["domain_intro"]
-            for i in range(start, start + n_examples + 1):
-                get_plan = False if i == start + self.n_examples else True
-                cur_instance = instance.format(i)
-                if get_plan and cur_instance in self.completed_list:
-                    continue
-                if self.verbose:
-                    print(f"Instance {cur_instance}")
-                # --------------- Read Instance --------------- #
-                problem = self.get_problem(cur_instance, domain_pddl)
-                # --------------------------------------------- #
-                # ------------ Put plan and instance into text ------------ #
-                self.compute_plan(domain_pddl, cur_instance)
-                INIT, GOAL, PLAN = instance_to_text_blocksworld(problem)
-                if get_plan:
-                    prompt += self.fill_template(INIT, GOAL, PLAN)
-                else:
-                    prompt += self.fill_template(INIT, GOAL, "")
-                    # Add separator
-                    prompt += '\n\n###\n\n'
-            completion = " " + PLAN
-            self.add_to_dataset({'prompt': prompt, 'completion':completion}, cur_instance)
+        for i in range(start, 1100):
+            # prompt = self.data["domain_intro"]
+            prompt = ""
+            if instance.format(i) in self.completed_list:
+                continue
+            get_plan = False
+            cur_instance = instance.format(i)
 
+            if self.verbose:
+                print(f"Instance {cur_instance}")
+            # --------------- Read Instance --------------- #
+            problem = self.get_problem(cur_instance, domain_pddl)
+            # --------------------------------------------- #
+            # ------------ Put plan and instance into text ------------ #
+            self.compute_plan(domain_pddl, cur_instance)
+            INIT, GOAL, PLAN = self.instance_to_text_blocksworld(problem)
+            if get_plan:
+                prompt += self.fill_template(INIT, GOAL, PLAN)
+            else:
+                prompt += self.fill_template(INIT, GOAL, "")
+                # Add separator
+                prompt += '\n\n###\n\n'
+            completion = " " + PLAN
+            # print(prompt)
+            # print(completion)
+            print(cur_instance in self.completed_list)
+            if cur_instance not in self.completed_list:
+                self.add_to_dataset({'prompt': prompt, 'completion':completion}, cur_instance)
+
+if __name__=="__main__":
+    config_file = './configs/t1_goal_directed_reasoning.yaml'
+    prompt_prepare = Prompt_Preparer(config_file)
+    prompt_prepare.prepare_dataset()

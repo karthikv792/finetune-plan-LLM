@@ -9,16 +9,17 @@
 (ontable b)
 (on c a)
 (on d c)
-(on e d)
+(ontable e)
 (clear b)
+(clear d)
 (clear e)
 )
 (:goal
 (and
-(on a c)
-(on c b)
+(on a d)
+(on b c)
 (on d e)
-(on e a))
+(on e b))
 )
 )
 
